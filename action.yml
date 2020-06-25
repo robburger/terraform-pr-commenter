@@ -1,0 +1,20 @@
+name: 'Terraform PR Commenter'
+description: 'Adds opinionated comments to a PR from Terraform fmt/init/plan output'
+author: 'Rob Burger'
+inputs:
+  commenter_type:
+    description: 'The type of comment. Options: [fmt, init, plan]'
+    required: true
+  commenter_input:
+    description: 'The comment to post from a previous step output'
+    required: true
+  commenter_exitcode:
+    description: 'The exit code from a previous step output'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.commenter_type }}
+    - ${{ inputs.commenter_input }}
+    - ${{ inputs.commenter_exitcode }}
