@@ -44,6 +44,9 @@ else
   DETAILS_STATE=""
 fi
 
+# Read HIGHLIGHT_CHANGES environment variable or use "true"
+COLOURISE=${HIGHLIGHT_CHANGES:-true}
+
 ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
 AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
 CONTENT_HEADER="Content-Type: application/json"
@@ -183,6 +186,9 @@ if [[ $COMMAND == 'plan' ]]; then
     CLEAN_PLAN=$(echo "$INPUT" | sed -n '/Refreshing state\.\.\./!p') # Strip refresh section
     CLEAN_PLAN=${CLEAN_PLAN::65300} # GitHub has a 65535-char comment limit - truncate plan, leaving space for comment wrapper
     CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -E 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
+    if [[ $COLOURISE == 'true' ]]; then
+      CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -E 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
+    fi
     PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
 <details$DETAILS_STATE><summary>Show Output</summary>
 
