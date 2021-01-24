@@ -94,7 +94,7 @@ $INPUT
   if [[ $EXIT_CODE -eq 3 ]]; then
     ALL_FILES_DIFF=""
     for file in $INPUT; do
-      THIS_FILE_DIFF=$(terraform fmt -no-color -write=false -diff "$file" | sed -n '/@@.*/,//{/@@.*/d;p}')
+      THIS_FILE_DIFF=$(terraform fmt -no-color -write=false -diff "$file")
       ALL_FILES_DIFF="$ALL_FILES_DIFF
 <details$DETAILS_STATE><summary><code>$file</code></summary>
 
