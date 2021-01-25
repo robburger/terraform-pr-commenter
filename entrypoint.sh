@@ -183,12 +183,12 @@ if [[ $COMMAND == 'plan' ]]; then
   # Meaning: 0 = Terraform plan succeeded with no changes. 2 = Terraform plan succeeded with changes.
   # Actions: Strip out the refresh section, ignore everything after the 72 dashes, format, colourise and build PR comment.
   if [[ $EXIT_CODE -eq 0 || $EXIT_CODE -eq 2 ]]; then
-    CLEAN_PLAN=$(echo "$INPUT" | sed -nr '/Refreshing state\.\.\./!p') # Strip refresh section
-    CLEAN_PLAN=$(echo "$INPUT" | sed -nr '/-{72}/Q') # Ignore everything after the 72 dashes (happens when saving a plan to file)
+    CLEAN_PLAN=$(echo "$INPUT" | sed -n '/Refreshing state\.\.\./!p') # Strip refresh section
+    CLEAN_PLAN=$(echo "$INPUT" | sed -nE '/-{72}/q;!p') # Ignore everything after the 72 dashes (happens when saving a plan to file)
     CLEAN_PLAN=${CLEAN_PLAN::65300} # GitHub has a 65535-char comment limit - truncate plan, leaving space for comment wrapper
-    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -nr 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
+    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -E 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
     if [[ $COLOURISE == 'true' ]]; then
-      CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -nr 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
+      CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -E 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
     fi
     PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
 <details$DETAILS_STATE><summary>Show Output</summary>
