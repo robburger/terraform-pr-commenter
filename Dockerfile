@@ -6,7 +6,7 @@ LABEL repository="https://github.com/robburger/terraform-pr-commenter" \
       com.github.actions.name="Terraform PR Commenter" \
       com.github.actions.description="Adds opinionated comments to a PR from Terraform fmt/init/plan output" \
       com.github.actions.icon="git-pull-request" \
-      com.github.actions.color="purple"
+      com.github.actions.color="green"
 
 RUN apk add --no-cache -q \
     bash \
