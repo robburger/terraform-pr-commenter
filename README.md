@@ -51,16 +51,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
----
-- name: Post Plan
-  uses: robburger/terraform-pr-commenter@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    EXPAND_SUMMARY_DETAILS: 'true' # Override global environment variable; expand details just for this step
-  with:
-    commenter_type: plan
-    commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
-    commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
+...
+      - name: Post Plan
+        uses: robburger/terraform-pr-commenter@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPAND_SUMMARY_DETAILS: 'true' # Override global environment variable; expand details just for this step
+        with:
+          commenter_type: plan
+          commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
 ```
 
 ## Examples
