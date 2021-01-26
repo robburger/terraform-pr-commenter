@@ -44,6 +44,9 @@ else
   DETAILS_STATE=""
 fi
 
+# Read HIGHLIGHT_CHANGES environment variable or use "true"
+COLOURISE=${HIGHLIGHT_CHANGES:-true}
+
 ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
 AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
 CONTENT_HEADER="Content-Type: application/json"
@@ -94,7 +97,7 @@ $INPUT
   if [[ $EXIT_CODE -eq 3 ]]; then
     ALL_FILES_DIFF=""
     for file in $INPUT; do
-      THIS_FILE_DIFF=$(terraform fmt -no-color -write=false -diff "$file" | sed -n '/@@.*/,//{/@@.*/d;p}')
+      THIS_FILE_DIFF=$(terraform fmt -no-color -write=false -diff "$file")
       ALL_FILES_DIFF="$ALL_FILES_DIFF
 <details$DETAILS_STATE><summary><code>$file</code></summary>
 
@@ -178,11 +181,15 @@ if [[ $COMMAND == 'plan' ]]; then
 
   # Exit Code: 0, 2
   # Meaning: 0 = Terraform plan succeeded with no changes. 2 = Terraform plan succeeded with changes.
-  # Actions: Strip out the refresh section (everything before the 72 '-' characters) and build PR comment.
+  # Actions: Strip out the refresh section, ignore everything after the 72 dashes, format, colourise and build PR comment.
   if [[ $EXIT_CODE -eq 0 || $EXIT_CODE -eq 2 ]]; then
     CLEAN_PLAN=$(echo "$INPUT" | sed -n '/Refreshing state\.\.\./!p') # Strip refresh section
+    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -nr '/-{72}/q;p') # Ignore everything after the 72 dashes (happens when saving a plan to file)
     CLEAN_PLAN=${CLEAN_PLAN::65300} # GitHub has a 65535-char comment limit - truncate plan, leaving space for comment wrapper
-    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -E 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
+    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
+    if [[ $COLOURISE == 'true' ]]; then
+      CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
+    fi
     PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
 <details$DETAILS_STATE><summary>Show Output</summary>
 
