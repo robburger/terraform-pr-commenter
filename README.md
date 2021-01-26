@@ -39,7 +39,7 @@ This action can only be run after a Terraform `fmt`, `init`, or `plan` has compl
 | `EXPAND_SUMMARY_DETAILS` | _optional_  | Default: `true`. This controls whether the comment output is collapsed or not.                                                                            |
 | `HIGHLIGHT_CHANGES`      | _optional_  | Default: `true`. This switches `~` to `!` in `plan` diffs to highlight Terraform changes in orange. Set to `false` to disable.                            |
 
-Both of these environment variables can be set at `job` or `step` level. For example, you could collapse all outputs but expand on a `plan`:
+All of these environment variables can be set at `job` or `step` level. For example, you could collapse all outputs but expand on a `plan`:
 
 ```yaml
 jobs:
@@ -61,6 +61,7 @@ jobs:
           commenter_type: plan
           commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
           commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
+...
 ```
 
 ## Examples
@@ -80,14 +81,15 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TF_IN_AUTOMATION: true
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
-        env:
-          TF_IN_AUTOMATION: true
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
           terraform_version: 0.14.5
@@ -100,8 +102,6 @@ jobs:
       - name: Post Format
         if: always() && github.ref != 'refs/heads/master' && (steps.fmt.outcome == 'success' || steps.fmt.outcome == 'failure')
         uses: robburger/terraform-pr-commenter@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commenter_type: fmt
           commenter_input: ${{ format('{0}{1}', steps.fmt.outputs.stdout, steps.fmt.outputs.stderr) }}
@@ -114,8 +114,6 @@ jobs:
       - name: Post Init
         if: always() && github.ref != 'refs/heads/master' && (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
         uses: robburger/terraform-pr-commenter@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commenter_type: init
           commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
@@ -128,8 +126,6 @@ jobs:
       - name: Post Plan
         if: always() && github.ref != 'refs/heads/master' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
         uses: robburger/terraform-pr-commenter@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commenter_type: plan
           commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
@@ -148,51 +144,47 @@ Multi-workspace matrix/parallel build:
 jobs:
   terraform:
     name: 'Terraform'
-      runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          workspace: [audit, staging]
-      env:
-        TF_WORKSPACE: ${{ matrix['workspace'] }}
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v2
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace: [audit, staging]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TF_IN_AUTOMATION: true
+      TF_WORKSPACE: ${{ matrix['workspace'] }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-        - name: Setup Terraform
-          uses: hashicorp/setup-terraform@v1
-          env:
-            TF_IN_AUTOMATION: true
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          terraform_version: 0.14.5
+
+      - name: Terraform Init - ${{ matrix['workspace'] }}
+        id: init
+        run: terraform init
+
+      - name: Post Init - ${{ matrix['workspace'] }}
+        if: always() && github.ref != 'refs/heads/master' && (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
+        uses: robburger/terraform-pr-commenter@v1
           with:
-            cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-            terraform_version: 0.14.5
+            commenter_type: init
+            commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
+            commenter_exitcode: ${{ steps.init.outputs.exitcode }}
 
-        - name: Terraform Init - ${{ matrix['workspace'] }}
-          id: init
-          run: terraform init
+      - name: Terraform Plan - ${{ matrix['workspace'] }}
+        id: plan
+        run: terraform plan -out ${{ matrix['workspace'] }}.plan
 
-        - name: Post Init - ${{ matrix['workspace'] }}
-          if: always() && github.ref != 'refs/heads/master' && (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
-          uses: robburger/terraform-pr-commenter@v1
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            with:
-              commenter_type: init
-              commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
-              commenter_exitcode: ${{ steps.init.outputs.exitcode }}
-
-        - name: Terraform Plan - ${{ matrix['workspace'] }}
-          id: plan
-          run: terraform plan -out ${{ matrix['workspace'] }}.plan
-
-        - name: Post Plan - ${{ matrix['workspace'] }}
-          if: always() && github.ref != 'refs/heads/master' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-          uses: robburger/terraform-pr-commenter@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            commenter_type: plan
-            commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
-            commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
+      - name: Post Plan - ${{ matrix['workspace'] }}
+        if: always() && github.ref != 'refs/heads/master' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        uses: robburger/terraform-pr-commenter@v1
+        with:
+          commenter_type: plan
+          commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
 ...
 ```
 
