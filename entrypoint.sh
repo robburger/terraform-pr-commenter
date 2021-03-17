@@ -181,10 +181,9 @@ if [[ $COMMAND == 'plan' ]]; then
 
   # Exit Code: 0, 2
   # Meaning: 0 = Terraform plan succeeded with no changes. 2 = Terraform plan succeeded with changes.
-  # Actions: Strip out the refresh section, ignore everything after the 72 dashes, format, colourise and build PR comment.
+  # Actions: Strip out the refresh section (everything before the actual plan output), format, colourise and build PR comment.
   if [[ $EXIT_CODE -eq 0 || $EXIT_CODE -eq 2 ]]; then
-    CLEAN_PLAN=$(echo "$INPUT" | sed -n '/Refreshing state\.\.\./!p') # Strip refresh section
-    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -nr '/-{72}/q;p') # Ignore everything after the 72 dashes (happens when saving a plan to file)
+    CLEAN_PLAN=$(echo "$INPUT" | sed -n '/^(An execution plan has been generated and is shown below.|No changes. Infrastructure is up-to-date.)$/,$!d') # Strip refresh section
     CLEAN_PLAN=${CLEAN_PLAN::65300} # GitHub has a 65535-char comment limit - truncate plan, leaving space for comment wrapper
     CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
     if [[ $COLOURISE == 'true' ]]; then
