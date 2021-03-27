@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.0
+
+- Bump to Terraform v0.14.9 internally (only affects `fmt`)
+- Fix output truncation in Terraform v0.14 and above
+
 ## v1.2.0
 
 - Bump to Terraform v0.14.5 internally (only affects `fmt`)
