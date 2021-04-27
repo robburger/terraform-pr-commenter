@@ -4,7 +4,9 @@ Adds opinionated comments to PR's based on Terraform `fmt`, `init`, `plan` and `
 
 ## Summary
 
-This Docker-based GitHub Action is designed to work in tandem with [hashicorp/setup-terraform](https://github.com/hashicorp/setup-terraform) with the wrapper enabled, taking the output from a `fmt`, `init`, `plan` or `validate`, formatting it and adding it to a pull request. Any previous comments from this Action are removed to keep the PR timeline clean.
+This Docker-based GitHub Action is designed to work in tandem with [hashicorp/setup-terraform](https://github.com/hashicorp/setup-terraform) with the **wrapper enabled**, taking the output from a `fmt`, `init`, `plan` or `validate`, formatting it and adding it to a pull request. Any previous comments from this Action are removed to keep the PR timeline clean.
+
+> The `terraform_wrapper` needs to be set to `true` (which is already the default) for the `hashicorp/setup-terraform` step as it enables the capturing of `stdout`, `stderr` and the `exitcode`.
 
 Support (for now) is [limited to Linux](https://help.github.com/en/actions/creating-actions/about-actions#types-of-actions) as Docker-based GitHub Actions can only be used on Linux runners.
 
@@ -92,7 +94,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-          terraform_version: 0.14.5
+          terraform_version: 0.15.0
 
       - name: Terraform Format
         id: fmt
@@ -172,7 +174,7 @@ jobs:
         uses: hashicorp/setup-terraform@v1
         with:
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-          terraform_version: 0.14.5
+          terraform_version: 0.15.0
 
       - name: Terraform Init - ${{ matrix['workspace'] }}
         id: init
@@ -202,21 +204,29 @@ jobs:
 
 "What's the crazy-looking `if:` doing there?" Good question! It's broken into 3 logic groups separated by `&&`, so all need to return `true` for the step to run:
 
-1. `always()` - ensures that the step is run regardless of the outcome in any previous steps
-2. `github.ref != 'refs/heads/master'` - prevents the step running on a `master` branch
-3. `(steps.step_id.outcome == 'success' || steps.step_id.outcome == 'failure')` - limits the run to the specific `step_id` only when there's a `success` or `failed` outcome.
+1. `always()` - ensures that the step is run regardless of the outcome in any previous steps. i.e. We don't want the build to quit after the previous step before we can write a PR comment with the failure reason.
+2. `github.ref != 'refs/heads/master'` - prevents the step running on a `master` branch. PR comments are not possible when there's no PR!
+3. `(steps.step_id.outcome == 'success' || steps.step_id.outcome == 'failure')` - ensures that this step only runs when `step_id` has either a `success` or `failed` outcome.
 
-In English: "Always run this step, but only on a pull request and only when the previous step succeeds or fails."
+In English: "Always run this step, but only on a pull request and only when the previous step succeeds or fails...and then stop the build."
 
 ## Screenshots
 
-### fmt
+### `fmt`
 
 ![fmt](images/fmt-output.png)
 
-### plan
+### `init`
+
+![fmt](images/init-output.png)
+
+### `plan`
 
 ![fmt](images/plan-output.png)
+
+### `validate`
+
+![fmt](images/validate-output.png)
 
 ## Troubleshooting & Contributing
 
