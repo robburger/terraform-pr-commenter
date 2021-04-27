@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.0
+
+- Bump to Terraform v0.15.0 internally (only affects `fmt`)
+- Change the way `plan`s are truncated after introduction of new horizontal break in TF v0.15.0
+- Add `validate` comment handling
+- Update readme
+
 ## v1.3.0
 
 - Bump to Terraform v0.14.9 internally (only affects `fmt`)
