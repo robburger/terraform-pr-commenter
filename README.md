@@ -1,34 +1,34 @@
 # Terraform PR Commenter
 
-Adds opinionated comments to PR's based on Terraform `fmt`, `init` and `plan` outputs.
+Adds opinionated comments to PR's based on Terraform `fmt`, `init`, `plan` and `validate` outputs.
 
 ## Summary
 
-This Docker-based GitHub Action is designed to work in tandem with [hashicorp/setup-terraform](https://github.com/hashicorp/setup-terraform) with the wrapper enabled, taking the output from a `fmt`, `init` or `plan`, formatting it and adding it to a pull request. Any previous comments from this Action are removed to keep the PR timeline clean.
+This Docker-based GitHub Action is designed to work in tandem with [hashicorp/setup-terraform](https://github.com/hashicorp/setup-terraform) with the wrapper enabled, taking the output from a `fmt`, `init`, `plan` or `validate`, formatting it and adding it to a pull request. Any previous comments from this Action are removed to keep the PR timeline clean.
 
 Support (for now) is [limited to Linux](https://help.github.com/en/actions/creating-actions/about-actions#types-of-actions) as Docker-based GitHub Actions can only be used on Linux runners.
 
 ## Usage
 
-This action can only be run after a Terraform `fmt`, `init`, or `plan` has completed, and the output has been captured. Terraform rarely writes to `stdout` and `stderr` in the same action, so we concatenate the `commenter_input`:
+This action can only be run after a Terraform `fmt`, `init`, `plan` or `validate` has completed, and the output has been captured. Terraform rarely writes to `stdout` and `stderr` in the same action, so we concatenate the `commenter_input`:
 
 ```yaml
 - uses: robburger/terraform-pr-commenter@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
-    commenter_type: fmt/init/plan # Choose one
+    commenter_type: fmt/init/plan/validate # Choose one
     commenter_input: ${{ format('{0}{1}', steps.step_id.outputs.stdout, steps.step_id.outputs.stderr) }}
     commenter_exitcode: ${{ steps.step_id.outputs.exitcode }}
 ```
 
 ### Inputs
 
-| Name                 | Requirement | Description                                           |
-| -------------------- | ----------- | ----------------------------------------------------- |
-| `commenter_type`     | _required_  | The type of comment. Options: [`fmt`, `init`, `plan`] |
-| `commenter_input`    | _required_  | The comment to post from a previous step output.      |
-| `commenter_exitcode` | _required_  | The exit code from a previous step output.            |
+| Name                 | Requirement | Description                                                       |
+| -------------------- | ----------- | ----------------------------------------------------------------- |
+| `commenter_type`     | _required_  | The type of comment. Options: [`fmt`, `init`, `plan`, `validate`] |
+| `commenter_input`    | _required_  | The comment to post from a previous step output.                  |
+| `commenter_exitcode` | _required_  | The exit code from a previous step output.                        |
 
 ### Environment Variables
 
@@ -118,6 +118,18 @@ jobs:
           commenter_type: init
           commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
           commenter_exitcode: ${{ steps.init.outputs.exitcode }}
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+
+      - name: Post Validate
+        if: always() && github.ref != 'refs/heads/master' && (steps.validate.outcome == 'success' || steps.validate.outcome == 'failure')
+        uses: robburger/terraform-pr-commenter@v1
+        with:
+          commenter_type: validate
+          commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
+          commenter_exitcode: ${{ steps.validate.outputs.exitcode }}
 
       - name: Terraform Plan
         id: plan
