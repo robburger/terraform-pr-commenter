@@ -19,8 +19,8 @@ if [[ -z $3 ]]; then
     exit 1
 fi
 
-if [[ ! "$1" =~ ^(fmt|init|plan)$ ]]; then
-  echo -e "Unsupported command \"$1\". Valid commands are \"fmt\", \"init\", \"plan\"."
+if [[ ! "$1" =~ ^(fmt|init|plan|validate)$ ]]; then
+  echo -e "Unsupported command \"$1\". Valid commands are \"fmt\", \"init\", \"plan\", \"validate\"."
   exit 1
 fi
 
@@ -215,6 +215,51 @@ $INPUT
   # Add plan comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
   echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
+  curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
+
+  exit 0
+fi
+
+###################
+# Handler: validate
+###################
+if [[ $COMMAND == 'validate' ]]; then
+  # Look for an existing validate PR comment and delete
+  echo -e "\033[34;1mINFO:\033[0m Looking for an existing validate PR comment."
+  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `validate` Failed")) | .id')
+  if [ "$PR_COMMENT_ID" ]; then
+    echo -e "\033[34;1mINFO:\033[0m Found existing validate PR comment: $PR_COMMENT_ID. Deleting."
+    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
+    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
+  else
+    echo -e "\033[34;1mINFO:\033[0m No existing validate PR comment found."
+  fi
+
+  # Exit Code: 0
+  # Meaning: Terraform successfully validated.
+  # Actions: Exit.
+  if [[ $EXIT_CODE -eq 0 ]]; then
+    echo -e "\033[34;1mINFO:\033[0m Terraform validate completed with no errors. Continuing."
+
+    exit 0
+  fi
+
+  # Exit Code: 1
+  # Meaning: Terraform validate failed or malformed Terraform CLI command.
+  # Actions: Build PR comment.
+  if [[ $EXIT_CODE -eq 1 ]]; then
+    PR_COMMENT="### Terraform \`validate\` Failed
+<details$DETAILS_STATE><summary>Show Output</summary>
+
+\`\`\`
+$INPUT
+\`\`\`
+</details>"
+  fi
+
+  # Add validate failure comment to PR.
+  PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
+  echo -e "\033[34;1mINFO:\033[0m Adding validate failure comment to PR."
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
 
   exit 0
