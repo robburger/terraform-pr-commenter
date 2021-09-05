@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.0
+
+- Bump to Terraform v1.0.6 internally (only affects `fmt`)
+- Fix Terraform v1 `plan` output truncation
+
 ## v1.4.0
 
 - Bump to Terraform v0.15.0 internally (only affects `fmt`)
