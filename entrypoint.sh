@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+look_for_existing_comment_and_delete () {
+  # Look for an existing $1 PR comment and delete
+  echo -e "\033[34;1mINFO:\033[0m Looking for an existing $1 PR comment."
+  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `$1` Failed")) | .id')
+  if [ "$PR_COMMENT_ID" ]; then
+    echo -e "\033[34;1mINFO:\033[0m Found existing $1 PR comment: $PR_COMMENT_ID. Deleting."
+    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
+    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
+  else
+    echo -e "\033[34;1mINFO:\033[0m No existing $1 PR comment found."
+  fi
+}
+
 #############
 # Validations
 #############
@@ -58,16 +71,7 @@ PR_COMMENT_URI=$(jq -r ".repository.issue_comment_url" "$GITHUB_EVENT_PATH" | se
 # Handler: fmt
 ##############
 if [[ $COMMAND == 'fmt' ]]; then
-  # Look for an existing fmt PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing fmt PR comment."
-  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `fmt` Failed")) | .id')
-  if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing fmt PR comment: $PR_COMMENT_ID. Deleting."
-    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
-  else
-    echo -e "\033[34;1mINFO:\033[0m No existing fmt PR comment found."
-  fi
+  look_for_existing_comment_and_delete "fmt"
 
   # Exit Code: 0
   # Meaning: All files formatted correctly.
@@ -123,17 +127,8 @@ fi
 # Handler: init
 ###############
 if [[ $COMMAND == 'init' ]]; then
-  # Look for an existing init PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing init PR comment."
-  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `init` Failed")) | .id')
-  if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing init PR comment: $PR_COMMENT_ID. Deleting."
-    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
-  else
-    echo -e "\033[34;1mINFO:\033[0m No existing init PR comment found."
-  fi
 
+  look_for_existing_comment_and_delete "init"
   # Exit Code: 0
   # Meaning: Terraform successfully initialized.
   # Actions: Exit.
@@ -224,16 +219,7 @@ fi
 # Handler: validate
 ###################
 if [[ $COMMAND == 'validate' ]]; then
-  # Look for an existing validate PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing validate PR comment."
-  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `validate` Failed")) | .id')
-  if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing validate PR comment: $PR_COMMENT_ID. Deleting."
-    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
-  else
-    echo -e "\033[34;1mINFO:\033[0m No existing validate PR comment found."
-  fi
+  look_for_existing_comment_and_delete "fmt"
 
   # Exit Code: 0
   # Meaning: Terraform successfully validated.
