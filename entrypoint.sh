@@ -33,7 +33,7 @@ COMMAND=$1
 RAW_INPUT="$COMMENTER_INPUT"
 if test -f "/tfplan"; then
   echo -e "Found tfplan; showing."
-  RAW_INPUT="$( { terraform show "/tfplan"; } 2>&1 )"
+  RAW_INPUT="$( terraform show "/tfplan" 2>&1 )"
 else
   echo -e "Found no tfplan.  Proceeding with input argument."
 fi
