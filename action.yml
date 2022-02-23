@@ -28,7 +28,7 @@ runs:
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
-    - run: docker run -v commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
+    - run: docker run commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
 
