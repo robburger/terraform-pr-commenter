@@ -19,10 +19,8 @@ runs:
   steps:
     - run: echo ${{ inputs.commenter_input }} >> tf.out
       shell: bash
-    - uses: 'docker'
-      with:
-        image: 'Dockerfile'
-        args:
-         - ${{ inputs.commenter_type }}
-         - tf.out
-         - ${{ inputs.commenter_exitcode }}
+    - run: docker build -t commenter -f Dockerfile
+      shell: bash
+    - run: docker run -it -v local ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
+      shell: bash
+
