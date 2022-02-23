@@ -15,9 +15,12 @@ inputs:
     description: 'The exit code from a previous step output'
     required: true
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.commenter_type }}
-    - ${{ inputs.commenter_input }}
-    - ${{ inputs.commenter_exitcode }}
+  using: "composite"
+  steps:
+    - run: echo ${{ inputs.commenter_input }} >> tf.out
+    - uses: 'docker'
+      image: 'Dockerfile'
+      args:
+       - ${{ inputs.commenter_type }}
+       - tf.out
+       - ${{ inputs.commenter_exitcode }}

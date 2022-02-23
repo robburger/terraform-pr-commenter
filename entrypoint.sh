@@ -29,8 +29,9 @@ fi
 ##################
 # Arg 1 is command
 COMMAND=$1
-# Arg 2 is input. We strip ANSI colours.
-INPUT=$(echo "$2" | sed 's/\x1b\[[0-9;]*m//g')
+# Arg 2 is input file. We strip ANSI colours.
+RAW_INPUT=$(<"$2")
+INPUT=$(echo "RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
 EXIT_CODE=$3
 
