@@ -9,7 +9,7 @@ inputs:
     description: 'The type of comment. Options: [fmt, init, plan]'
     required: true
   commenter_input:
-    description: 'The comment to post from a previous step output'
+    description: 'The comment to post from a previous step output or a tfplan file'
     required: true
   commenter_exitcode:
     description: 'The exit code from a previous step output'
@@ -17,10 +17,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-#    - run: printf "%s\n" "$INPUT" > tf.out
-#      shell: bash
-#      name: Write terraform output to file
-#      env:
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
