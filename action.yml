@@ -25,7 +25,7 @@ runs:
     - run: echo ${{ inputs.commenter_input }} >> tf.out
       shell: bash
       name: Write terraform output to file
-    - run: docker build -t commenter -f Dockerfile .
+    - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
     - run: docker run -it -v local ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
