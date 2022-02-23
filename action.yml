@@ -17,16 +17,10 @@ inputs:
 runs:
   using: "composite"
   steps:
-#    - name: Pull
-#      uses: actions/checkout@v2
-#      with:
-#        ref: ${{ github.event.deployment.ref }}
-#        lfs: true
-    - run: printf "%s\n" "$INPUT" > tf.out
-      shell: bash
-      name: Write terraform output to file
-      env:
-        INPUT: ${{ inputs.commenter_input }}
+#    - run: printf "%s\n" "$INPUT" > tf.out
+#      shell: bash
+#      name: Write terraform output to file
+#      env:
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
@@ -38,8 +32,11 @@ runs:
         -e EXPAND_SUMMARY_DETAILS \
         -e HIGHLIGHT_CHANGES \
         -e GITHUB_EVENT='${{ toJSON(github.event) }}' \
-        commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
+        -e COMMENTER_INPUT
+        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
 
 
