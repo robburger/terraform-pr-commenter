@@ -26,7 +26,6 @@ runs:
         GITHUB_EVENT: ${{ toJSON(github.event) }}
       run: |
         docker run \
-        # must enumerate all env vars we want to pass into docker, sadly. \
         -e GITHUB_TOKEN \
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
@@ -43,7 +42,6 @@ runs:
         GITHUB_EVENT: ${{ toJSON(github.event) }}
       run: |
         docker run \
-        # must enumerate all env vars we want to pass into docker, sadly. \
         -e GITHUB_TOKEN \
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
