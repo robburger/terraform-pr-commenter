@@ -29,6 +29,7 @@ runs:
         -e HIGHLIGHT_CHANGES \
         -e GITHUB_EVENT \
         -e COMMENTER_INPUT \
+        -v "$(pwd)"/tfplan:/tfplan \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
