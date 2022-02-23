@@ -34,7 +34,7 @@ RAW_INPUT=""
 if test -f "$2"; then
   RAW_INPUT="$(<"$2")"
 fi
-INPUT=$(echo "RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
+INPUT=$(echo "$RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
 EXIT_CODE=$3
 
