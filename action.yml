@@ -22,9 +22,11 @@ runs:
 #      with:
 #        ref: ${{ github.event.deployment.ref }}
 #        lfs: true
-    - run: printf "%s\n" "${{ inputs.commenter_input }}" > tf.out
+    - run: printf "%s\n" "$INPUT" > tf.out
       shell: bash
       name: Write terraform output to file
+      env:
+        INPUT: ${{ inputs.commenter_input }}
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
@@ -39,4 +41,5 @@ runs:
         commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
+
 
