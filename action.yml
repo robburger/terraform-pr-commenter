@@ -17,10 +17,18 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Pull
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.event.deployment.ref }}
+        lfs: true
     - run: echo ${{ inputs.commenter_input }} >> tf.out
       shell: bash
+      name: Write terraform output to file
     - run: docker build -t commenter -f Dockerfile .
       shell: bash
+      name: Build commenter docker image
     - run: docker run -it -v local ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
       shell: bash
+      name: Run commenter image
 
