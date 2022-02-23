@@ -37,7 +37,7 @@ runs:
         -e GITHUB_EVENT \
         -e COMMENTER_INPUT \
         -e AWS_ACCESS_KEY_ID \
-        -e AWS_SECRET_ACCESS_KEY \
+        -e AWS_SECRET_KEY \
         -e AWS_REGION \
         -v "$(pwd)"/:/workspace \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
