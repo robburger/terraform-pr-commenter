@@ -31,9 +31,11 @@ fi
 COMMAND=$1
 # Arg 2 is input file. We strip ANSI colours.
 RAW_INPUT="$COMMENTER_INPUT"
-if test -f "/tfplan"; then
+if test -f "/workspace/tfplan"; then
   echo -e "Found tfplan; showing."
-  RAW_INPUT="$( terraform show "/tfplan" 2>&1 )"
+  pushd "/workspace"
+  RAW_INPUT="$( terraform show "tfplan" 2>&1 )"
+  popd
   echo -e "Plan raw input: $RAW_INPUT"
 else
   echo -e "Found no tfplan.  Proceeding with input argument."
