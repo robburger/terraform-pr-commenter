@@ -25,9 +25,6 @@ runs:
     - run: echo '${{ inputs.commenter_input }}' >> tf.out
       shell: bash
       name: Write terraform output to file
-    - run: cp '${{ github.event_path }}' event.json
-      shell: bash
-      name: Copy event json to file
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
       name: Build commenter docker image
@@ -38,6 +35,7 @@ runs:
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
         -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT=${{ github.event }}
         commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
