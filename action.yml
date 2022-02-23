@@ -35,7 +35,6 @@ runs:
         # must enumerate all env vars we want to pass into docker, sadly.
         docker run \
         -e GITHUB_TOKEN \
-        -e GITHUB_EVENT_PATH \
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
         -e HIGHLIGHT_CHANGES \

@@ -3,8 +3,8 @@
 #############
 # Validations
 #############
-GITHUB_EVENT=event.json
-PR_NUMBER=$(jq -r ".pull_request.number" "$GITHUB_EVENT")
+GITHUB_EVENT_PATH=event.json
+PR_NUMBER=$(jq -r ".pull_request.number" "$GITHUB_EVENT_PATH")
 if [[ "$PR_NUMBER" == "null" ]]; then
 	echo "This isn't a PR."
 	exit 0
