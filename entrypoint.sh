@@ -24,7 +24,7 @@ if [[ ! "$1" =~ ^(fmt|init|plan|validate)$ ]]; then
   exit 1
 fi
 
-echo -e "AWS region is: $AWS_REGION"
+echo -e "Environment is: $(env)"
 
 ##################
 # Shared Variables
