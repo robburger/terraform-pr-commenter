@@ -35,7 +35,7 @@ runs:
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
         -e HIGHLIGHT_CHANGES \
-        -e GITHUB_EVENT=${{ github.event }}
+        -e GITHUB_EVENT=${{ toJSON(github.event) }}
         commenter ${{ inputs.commenter_type }} tf.out ${{ inputs.commenter_exitcode }}
       shell: bash
       name: Run commenter image
