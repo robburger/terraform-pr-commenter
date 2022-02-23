@@ -34,6 +34,7 @@ RAW_INPUT="$COMMENTER_INPUT"
 if test -f "/tfplan"; then
   echo -e "Found tfplan; showing."
   RAW_INPUT="$( terraform show "/tfplan" 2>&1 )"
+  echo -e "Plan raw input: $RAW_INPUT"
 else
   echo -e "Found no tfplan.  Proceeding with input argument."
 fi
