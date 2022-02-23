@@ -32,7 +32,12 @@ COMMAND=$1
 # Arg 2 is input file. We strip ANSI colours.
 RAW_INPUT="$COMMENTER_INPUT"
 if test -f "$COMMENTER_INPUT"; then
+  echo -e "Found a file matching $COMMENTER_INPUT; showing plan."
   RAW_INPUT="$( { terraform show "$COMMENTER_INPUT"; } 2>&1 )"
+else
+  echo -e "No file matching $COMMENTER_INPUT; not showing plan."
+  echo -e "Directory contents: $(ls -la)"
+
 fi
 INPUT=$(echo "$RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
