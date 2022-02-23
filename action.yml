@@ -22,10 +22,10 @@ runs:
 #      with:
 #        ref: ${{ github.event.deployment.ref }}
 #        lfs: true
-    - run: echo "${{ inputs.commenter_input }}" >> tf.out
+    - run: echo '${{ inputs.commenter_input }}' >> tf.out
       shell: bash
       name: Write terraform output to file
-    - run: cp "${{ github.event_path }}" event.json
+    - run: cp '${{ github.event_path }}' event.json
       shell: bash
       name: Copy event json to file
     - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
