@@ -31,11 +31,11 @@ fi
 COMMAND=$1
 # Arg 2 is input file. We strip ANSI colours.
 RAW_INPUT="$COMMENTER_INPUT"
-if [[ -d "/tfplan" ]] ; then
-  echo -e "Found no tfplan.  Proceeding with input argument."
-else
+if test -f "/tfplan"; then
   echo -e "Found tfplan; showing."
   RAW_INPUT="$( { terraform show "/tfplan"; } 2>&1 )"
+else
+  echo -e "Found no tfplan.  Proceeding with input argument."
 fi
 INPUT=$(echo "$RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
