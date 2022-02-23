@@ -17,12 +17,16 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
+    - name: Build commenter docker image
+      run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
-      name: Build commenter docker image
-    - run: |
-        # must enumerate all env vars we want to pass into docker, sadly.
+    - name: Run commenter image (plan)
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+      run: |
         docker run \
+        # must enumerate all env vars we want to pass into docker, sadly. \
         -e GITHUB_TOKEN \
         -e TF_WORKSPACE \
         -e EXPAND_SUMMARY_DETAILS \
@@ -32,9 +36,21 @@ runs:
         -v "$(pwd)"/tfplan:/tfplan \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash
-      name: Run commenter image
+      if: ${{ inputs.commenter_type == "plan" }}
+    - name: Run commenter image (non-plan)
       env:
         COMMENTER_INPUT: ${{ inputs.commenter_input }}
         GITHUB_EVENT: ${{ toJSON(github.event) }}
-
+      run: |
+        docker run \
+        # must enumerate all env vars we want to pass into docker, sadly. \
+        -e GITHUB_TOKEN \
+        -e TF_WORKSPACE \
+        -e EXPAND_SUMMARY_DETAILS \
+        -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT \
+        -e COMMENTER_INPUT \
+        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
+      shell: bash
+      if: ${{ inputs.commenter_type != "plan" }}
 
