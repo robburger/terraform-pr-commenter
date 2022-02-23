@@ -18,7 +18,7 @@ runs:
   using: "composite"
   steps:
     - name: Build commenter docker image
-      run: docker build -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
+      run: docker build -t --build-arg TERRAFORM_VERSION=$TF_VERSION commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
       shell: bash
     - name: Run commenter image (plan)
       env:
