@@ -38,7 +38,7 @@ if test -f "/workspace/tfplan"; then
   pushd "/workspace"
   RAW_INPUT="$( terraform show "tfplan" 2>&1 )"
   popd
-  echo -e "Plan raw input: $RAW_INPUT"
+  # echo -e "Plan raw input: $RAW_INPUT"
 else
   echo -e "Found no tfplan.  Proceeding with input argument."
 fi
