@@ -9,15 +9,55 @@ inputs:
     description: 'The type of comment. Options: [fmt, init, plan]'
     required: true
   commenter_input:
-    description: 'The comment to post from a previous step output'
+    description: 'The comment to post from a previous step output or a tfplan file'
     required: true
   commenter_exitcode:
     description: 'The exit code from a previous step output'
     required: true
+  terraform_version:
+    description: 'The version of terraform with which a plan was generated'
+    required: false
+    default: "1.0.6"
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.commenter_type }}
-    - ${{ inputs.commenter_input }}
-    - ${{ inputs.commenter_exitcode }}
+  using: "composite"
+  steps:
+    - name: Build commenter docker image
+      run: docker build --build-arg TERRAFORM_VERSION=${{ inputs.terraform_version }} -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#use-intermediate-file
+      shell: bash
+    - name: Run commenter image (plan)
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_KEY }}
+      run: |
+        docker run \
+        -e GITHUB_TOKEN \
+        -e TF_WORKSPACE \
+        -e EXPAND_SUMMARY_DETAILS \
+        -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT \
+        -e COMMENTER_INPUT \
+        -e AWS_ACCESS_KEY_ID \
+        -e AWS_SECRET_KEY \
+        -e AWS_SECRET_ACCESS_KEY \
+        -e AWS_REGION \
+        -v "$(pwd)"/:/workspace \
+        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
+      shell: bash
+      if: ${{ inputs.commenter_type == 'plan' }}
+    - name: Run commenter image (non-plan)
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+      run: |
+        docker run \
+        -e GITHUB_TOKEN \
+        -e TF_WORKSPACE \
+        -e EXPAND_SUMMARY_DETAILS \
+        -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT \
+        -e COMMENTER_INPUT \
+        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
+      shell: bash
+      if: ${{ inputs.commenter_type != 'plan' }}
+

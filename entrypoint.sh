@@ -3,7 +3,7 @@
 #############
 # Validations
 #############
-PR_NUMBER=$(jq -r ".pull_request.number" "$GITHUB_EVENT_PATH")
+PR_NUMBER=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.number")
 if [[ "$PR_NUMBER" == "null" ]]; then
 	echo "This isn't a PR."
 	exit 0
@@ -29,8 +29,18 @@ fi
 ##################
 # Arg 1 is command
 COMMAND=$1
-# Arg 2 is input. We strip ANSI colours.
-INPUT=$(echo "$2" | sed 's/\x1b\[[0-9;]*m//g')
+# Arg 2 is input file. We strip ANSI colours.
+RAW_INPUT="$COMMENTER_INPUT"
+if test -f "/workspace/tfplan"; then
+  echo -e "Found tfplan; showing."
+  pushd "/workspace"
+  RAW_INPUT="$( terraform show "tfplan" 2>&1 )"
+  popd
+  # echo -e "Plan raw input: $RAW_INPUT"
+else
+  echo -e "Found no tfplan.  Proceeding with input argument."
+fi
+INPUT=$(echo "$RAW_INPUT" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
 EXIT_CODE=$3
 
@@ -51,8 +61,8 @@ ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
 AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
 CONTENT_HEADER="Content-Type: application/json"
 
-PR_COMMENTS_URL=$(jq -r ".pull_request.comments_url" "$GITHUB_EVENT_PATH")
-PR_COMMENT_URI=$(jq -r ".repository.issue_comment_url" "$GITHUB_EVENT_PATH" | sed "s|{/number}||g")
+PR_COMMENTS_URL=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.comments_url")
+PR_COMMENT_URI=$(echo "$GITHUB_EVENT" | jq -r ".repository.issue_comment_url" | sed "s|{/number}||g")
 
 ##############
 # Handler: fmt
