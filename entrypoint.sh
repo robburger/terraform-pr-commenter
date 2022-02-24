@@ -71,6 +71,7 @@ make_and_post_payload () {
   # Add plan comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$1" '.body = $body')
   echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
+  echo -e "Contents:\n $PR_PAYLOAD"
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$1" -L "$PR_COMMENTS_URL" > /dev/null
 }
 
@@ -190,7 +191,7 @@ fi
 if [[ $COMMAND == 'plan' ]]; then
   # Look for an existing plan PR comment and delete
   echo -e "\033[34;1mINFO:\033[0m Looking for an existing plan PR comment."
-  for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L $PR_COMMENTS_URL | jq '.[] | select(.body|test ("### Terraform `plan` .* for Workspace: `'$WORKSPACE'`")) | .id')
+  for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `plan` .* for Workspace: `'$WORKSPACE'`")) | .id')
   do
     FOUND=true
     echo -e "\033[34;1mINFO:\033[0m Found existing plan PR comment: $PR_COMMENT_ID. Deleting."
@@ -213,7 +214,7 @@ if [[ $COMMAND == 'plan' ]]; then
     # trim to the last newline that fits within length
     while [ ${#REMAINING_PLAN} -gt 0 ] ; do
       CURRENT_PLAN=${REMAINING_PLAN::65300} # GitHub has a 65535-char comment limit - truncate and iterate
-      CURRENT_PLAN=${CURRENT_PLAN%\n*} # trim to the last newline
+      CURRENT_PLAN="${CURRENT_PLAN%$'\n'*}" # trim to the last newline
       PROCESSED_PLAN_LENGTH=$((PROCESSED_PLAN_LENGTH+${#CURRENT_PLAN})) # evaluate length of outbound comment and store
 
       CURRENT_PLAN=$(echo "$CURRENT_PLAN" | sed -r 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
