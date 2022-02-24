@@ -28,6 +28,7 @@ runs:
       env:
         COMMENTER_INPUT: ${{ inputs.commenter_input }}
         GITHUB_EVENT: ${{ toJSON(github.event) }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_KEY }}
       run: |
         docker run \
         -e GITHUB_TOKEN \
@@ -38,6 +39,7 @@ runs:
         -e COMMENTER_INPUT \
         -e AWS_ACCESS_KEY_ID \
         -e AWS_SECRET_KEY \
+        -e AWS_SECRET_ACCESS_KEY \
         -e AWS_REGION \
         -v "$(pwd)"/:/workspace \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
@@ -55,9 +57,6 @@ runs:
         -e HIGHLIGHT_CHANGES \
         -e GITHUB_EVENT \
         -e COMMENTER_INPUT \
-        -e AWS_ACCESS_KEY_ID \
-        -e AWS_SECRET_ACCESS_KEY \
-        -e AWS_REGION \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash
       if: ${{ inputs.commenter_type != 'plan' }}
