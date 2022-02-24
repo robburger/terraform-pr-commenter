@@ -71,7 +71,6 @@ make_and_post_payload () {
   # Add plan comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$1" '.body = $body')
   echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
-  echo -e "Contents:\n $PR_PAYLOAD"
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
 }
 
