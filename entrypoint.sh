@@ -64,6 +64,16 @@ CONTENT_HEADER="Content-Type: application/json"
 PR_COMMENTS_URL=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.comments_url")
 PR_COMMENT_URI=$(echo "$GITHUB_EVENT" | jq -r ".repository.issue_comment_url" | sed "s|{/number}||g")
 
+#############
+# Functions #
+#############
+make_and_post_payload () {
+  # Add plan comment to PR.
+  PR_PAYLOAD=$(echo '{}' | jq --arg body "$1" '.body = $body')
+  echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
+  curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$1" -L "$PR_COMMENTS_URL" > /dev/null
+}
+
 ##############
 # Handler: fmt
 ##############
@@ -180,12 +190,14 @@ fi
 if [[ $COMMAND == 'plan' ]]; then
   # Look for an existing plan PR comment and delete
   echo -e "\033[34;1mINFO:\033[0m Looking for an existing plan PR comment."
-  PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `plan` .* for Workspace: `'"$WORKSPACE"'`")) | .id')
-  if [ "$PR_COMMENT_ID" ]; then
+  for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L $PR_COMMENTS_URL | jq '.[] | select(.body|test ("### Terraform `plan` .* for Workspace: `'$WORKSPACE'`")) | .id')
+  do
+    FOUND=true
     echo -e "\033[34;1mINFO:\033[0m Found existing plan PR comment: $PR_COMMENT_ID. Deleting."
     PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
-  else
+    # curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
+  done
+  if [ -z $FOUND ]; then
     echo -e "\033[34;1mINFO:\033[0m No existing plan PR comment found."
   fi
 
@@ -195,20 +207,31 @@ if [[ $COMMAND == 'plan' ]]; then
   if [[ $EXIT_CODE -eq 0 || $EXIT_CODE -eq 2 ]]; then
     CLEAN_PLAN=$(echo "$INPUT" | sed -r '/^(An execution plan has been generated and is shown below.|Terraform used the selected providers to generate the following execution|No changes. Infrastructure is up-to-date.|No changes. Your infrastructure matches the configuration.|Note: Objects have changed outside of Terraform)$/,$!d') # Strip refresh section
     CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r '/Plan: /q') # Ignore everything after plan summary
-    CLEAN_PLAN=${CLEAN_PLAN::65300} # GitHub has a 65535-char comment limit - truncate plan, leaving space for comment wrapper
-    CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
-    if [[ $COLOURISE == 'true' ]]; then
-      CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
-    fi
-    PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
+    REMAINING_PLAN=$CLEAN_PLAN
+    PROCESSED_PLAN_LENGTH=0
+
+    # trim to the last newline that fits within length
+    while [ ${#REMAINING_PLAN} -gt 0 ] ; do
+      CURRENT_PLAN=${REMAINING_PLAN::65300} # GitHub has a 65535-char comment limit - truncate and iterate
+      CURRENT_PLAN=${CURRENT_PLAN%\n*} # trim to the last newline
+      PROCESSED_PLAN_LENGTH=$((PROCESSED_PLAN_LENGTH+${#CURRENT_PLAN})) # evaluate length of outbound comment and store
+
+      CURRENT_PLAN=$(echo "$CURRENT_PLAN" | sed -r 's/^([[:blank:]]*)([-+~])/\2\1/g') # Move any diff characters to start of line
+      if [[ $COLOURISE == 'true' ]]; then
+        CURRENT_PLAN=$(echo "$CURRENT_PLAN" | sed -r 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
+      fi
+      PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`diff
-$CLEAN_PLAN
+$CURRENT_PLAN
 \`\`\`
 </details>"
-  fi
 
+      make_and_post_payload "$PR_COMMENT"
+      REMAINING_PLAN=${REMAINING_PLAN:PROCESSED_PLAN_LENGTH}
+    done
+  fi
   # Exit Code: 1
   # Meaning: Terraform plan failed.
   # Actions: Build PR comment.
@@ -220,12 +243,10 @@ $CLEAN_PLAN
 $INPUT
 \`\`\`
 </details>"
-  fi
 
-  # Add plan comment to PR.
-  PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
-  echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
-  curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
+    # Add plan comment to PR.
+    make_and_post_payload "$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')"
+  fi
 
   exit 0
 fi
