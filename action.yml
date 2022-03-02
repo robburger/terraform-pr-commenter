@@ -42,6 +42,8 @@ runs:
         -e AWS_SECRET_KEY \
         -e AWS_SECRET_ACCESS_KEY \
         -e AWS_REGION \
+        -e COMMENTER_DEBUG \
+        -e COMMENTER_ECHO \
         -v "$(pwd)"/:/workspace \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash

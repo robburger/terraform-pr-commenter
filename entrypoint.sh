@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ -n "${COMMENTER_ECHO+x}" ]; then
+  set -x
+fi
+
 #############
 # Validations
 #############
@@ -24,6 +28,31 @@ if [[ ! "$1" =~ ^(fmt|init|plan|validate)$ ]]; then
   exit 1
 fi
 
+#############
+# Functions #
+#############
+debug () {
+  if [ -n "${COMMENTER_DEBUG+x}" ]; then
+    echo -e "\033[33;1mDEBUG:\033[0m $1"
+  fi
+}
+
+info () {
+  echo -e "\033[34;1mINFO:\033[0m $1"
+}
+
+error () {
+  echo -e "\033[31;1mERROR:\033[0m $1"
+}
+
+make_and_post_payload () {
+  # Add plan comment to PR.
+  PR_PAYLOAD=$(echo '{}' | jq --arg body "$1" '.body = $body')
+  info "Adding plan comment to PR."
+  debug "PR payload:\n$PR_PAYLOAD"
+  curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
+}
+
 ##################
 # Shared Variables
 ##################
@@ -32,13 +61,24 @@ COMMAND=$1
 # Arg 2 is input file. We strip ANSI colours.
 RAW_INPUT="$COMMENTER_INPUT"
 if test -f "/workspace/tfplan"; then
-  echo -e "Found tfplan; showing."
-  pushd "/workspace"
+  info "Found tfplan; showing."
+  pushd workspace > /dev/null || (error "Failed to push workspace dir" && exit 1)
+  INIT_OUTPUT="$(terraform init 2>&1)"
+  INIT_RESULT=$?
+  if [ $INIT_RESULT -ne 0 ]; then
+     error "Failed pre-plan init.  Init output: \n$INIT_OUTPUT"
+     exit 1
+  fi
   RAW_INPUT="$( terraform show "tfplan" 2>&1 )"
-  popd
-  # echo -e "Plan raw input: $RAW_INPUT"
+  SHOW_RESULT=$?
+  if [ $SHOW_RESULT -ne 0 ]; then
+     error "Plan failed to show.  Plan output: \n$RAW_INPUT"
+     exit 1
+  fi
+  popd > /dev/null || (error "Failed to pop workspace dir" && exit 1)
+  debug "Plan raw input: $RAW_INPUT"
 else
-  echo -e "Found no tfplan.  Proceeding with input argument."
+  info "Found no tfplan.  Proceeding with input argument."
 fi
 
 # change diff character, a red '-', into a high unicode character \U1f605 (literally 😅)
@@ -72,36 +112,27 @@ CONTENT_HEADER="Content-Type: application/json"
 PR_COMMENTS_URL=$(echo "$GITHUB_EVENT" | jq -r ".pull_request.comments_url")
 PR_COMMENT_URI=$(echo "$GITHUB_EVENT" | jq -r ".repository.issue_comment_url" | sed "s|{/number}||g")
 
-#############
-# Functions #
-#############
-make_and_post_payload () {
-  # Add plan comment to PR.
-  PR_PAYLOAD=$(echo '{}' | jq --arg body "$1" '.body = $body')
-  echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
-  curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
-}
 
 ##############
 # Handler: fmt
 ##############
 if [[ $COMMAND == 'fmt' ]]; then
   # Look for an existing fmt PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing fmt PR comment."
+  info "Looking for an existing fmt PR comment."
   PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `fmt` Failed")) | .id')
   if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing fmt PR comment: $PR_COMMENT_ID. Deleting."
+    info "Found existing fmt PR comment: $PR_COMMENT_ID. Deleting."
     PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
     curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
   else
-    echo -e "\033[34;1mINFO:\033[0m No existing fmt PR comment found."
+    info "No existing fmt PR comment found."
   fi
 
   # Exit Code: 0
   # Meaning: All files formatted correctly.
   # Actions: Exit.
   if [[ $EXIT_CODE -eq 0 ]]; then
-    echo -e "\033[34;1mINFO:\033[0m Terraform fmt completed with no errors. Continuing."
+    info "Terraform fmt completed with no errors. Continuing."
 
     exit 0
   fi
@@ -141,7 +172,7 @@ $ALL_FILES_DIFF"
 
   # Add fmt failure comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
-  echo -e "\033[34;1mINFO:\033[0m Adding fmt failure comment to PR."
+  info "Adding fmt failure comment to PR."
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
 
   exit 0
@@ -152,21 +183,21 @@ fi
 ###############
 if [[ $COMMAND == 'init' ]]; then
   # Look for an existing init PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing init PR comment."
+  info "Looking for an existing init PR comment."
   PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `init` Failed")) | .id')
   if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing init PR comment: $PR_COMMENT_ID. Deleting."
+    info "Found existing init PR comment: $PR_COMMENT_ID. Deleting."
     PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
     curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
   else
-    echo -e "\033[34;1mINFO:\033[0m No existing init PR comment found."
+    info "No existing init PR comment found."
   fi
 
   # Exit Code: 0
   # Meaning: Terraform successfully initialized.
   # Actions: Exit.
   if [[ $EXIT_CODE -eq 0 ]]; then
-    echo -e "\033[34;1mINFO:\033[0m Terraform init completed with no errors. Continuing."
+    info "Terraform init completed with no errors. Continuing."
 
     exit 0
   fi
@@ -186,7 +217,7 @@ $INPUT
 
   # Add init failure comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
-  echo -e "\033[34;1mINFO:\033[0m Adding init failure comment to PR."
+  info "Adding init failure comment to PR."
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
 
   exit 0
@@ -197,16 +228,16 @@ fi
 ###############
 if [[ $COMMAND == 'plan' ]]; then
   # Look for an existing plan PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing plan PR comment."
+  info "Looking for an existing plan PR comment."
   for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `plan` .* for Workspace: `'$WORKSPACE'`")) | .id')
   do
     FOUND=true
-    echo -e "\033[34;1mINFO:\033[0m Found existing plan PR comment: $PR_COMMENT_ID. Deleting."
+    info "Found existing plan PR comment: $PR_COMMENT_ID. Deleting."
     PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
     curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
   done
   if [ -z $FOUND ]; then
-    echo -e "\033[34;1mINFO:\033[0m No existing plan PR comment found."
+    info "No existing plan PR comment found."
   fi
 
   # Exit Code: 0, 2
@@ -220,9 +251,16 @@ if [[ $COMMAND == 'plan' ]]; then
 
     # trim to the last newline that fits within length
     while [ ${#REMAINING_PLAN} -gt 0 ] ; do
+      debug "Remaining plan: \n$REMAINING_PLAN"
+
       CURRENT_PLAN=${REMAINING_PLAN::65300} # GitHub has a 65535-char comment limit - truncate and iterate
-      CURRENT_PLAN="${CURRENT_PLAN%$'\n'*}" # trim to the last newline
+      if [ ${#CURRENT_PLAN} -ne ${#REMAINING_PLAN} ] ; then
+        debug "Plan is over 64k length limit.  Splitting."
+        CURRENT_PLAN="${CURRENT_PLAN%$'\n'*}" # trim to the last newline
+      fi
       PROCESSED_PLAN_LENGTH=$((PROCESSED_PLAN_LENGTH+${#CURRENT_PLAN})) # evaluate length of outbound comment and store
+
+      debug "Processed plan length: ${PROCESSED_PLAN_LENGTH}"
 
       # Move any diff characters to start of line and then swap our emoji back to a '-'
       CURRENT_PLAN=$(echo "$CURRENT_PLAN" | sed -r 's/^([[:blank:]]*)([😅+~])/\2\1/g' | sed -r 's/^😅/-/')
@@ -265,21 +303,21 @@ fi
 ###################
 if [[ $COMMAND == 'validate' ]]; then
   # Look for an existing validate PR comment and delete
-  echo -e "\033[34;1mINFO:\033[0m Looking for an existing validate PR comment."
+  info "Looking for an existing validate PR comment."
   PR_COMMENT_ID=$(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | jq '.[] | select(.body|test ("### Terraform `validate` Failed")) | .id')
   if [ "$PR_COMMENT_ID" ]; then
-    echo -e "\033[34;1mINFO:\033[0m Found existing validate PR comment: $PR_COMMENT_ID. Deleting."
+    info "Found existing validate PR comment: $PR_COMMENT_ID. Deleting."
     PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
     curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
   else
-    echo -e "\033[34;1mINFO:\033[0m No existing validate PR comment found."
+    info "No existing validate PR comment found."
   fi
 
   # Exit Code: 0
   # Meaning: Terraform successfully validated.
   # Actions: Exit.
   if [[ $EXIT_CODE -eq 0 ]]; then
-    echo -e "\033[34;1mINFO:\033[0m Terraform validate completed with no errors. Continuing."
+    info "Terraform validate completed with no errors. Continuing."
 
     exit 0
   fi
@@ -299,7 +337,7 @@ $INPUT
 
   # Add validate failure comment to PR.
   PR_PAYLOAD=$(echo '{}' | jq --arg body "$PR_COMMENT" '.body = $body')
-  echo -e "\033[34;1mINFO:\033[0m Adding validate failure comment to PR."
+  info "Adding validate failure comment to PR."
   curl -sS -X POST -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -H "$CONTENT_HEADER" -d "$PR_PAYLOAD" -L "$PR_COMMENTS_URL" > /dev/null
 
   exit 0
