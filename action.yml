@@ -60,6 +60,8 @@ runs:
         -e HIGHLIGHT_CHANGES \
         -e GITHUB_EVENT \
         -e COMMENTER_INPUT \
+        -e COMMENTER_DEBUG \
+        -e COMMENTER_ECHO \
         commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
       shell: bash
       if: ${{ inputs.commenter_type != 'plan' }}
