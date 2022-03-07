@@ -12,6 +12,7 @@ LABEL repository="https://github.com/robburger/terraform-pr-commenter" \
 RUN apk add --no-cache -q \
     bash \
     curl \
+    perl \
     jq
 
 ADD entrypoint.sh /entrypoint.sh
