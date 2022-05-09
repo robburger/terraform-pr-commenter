@@ -9,8 +9,11 @@ inputs:
     description: 'The type of comment. Options: [fmt, init, plan]'
     required: true
   commenter_input:
-    description: 'The comment to post from a previous step output or a tfplan file'
+    description: 'The comment to post from a previous step output.  Will be trimmed to 64k length.'
     required: true
+  commenter_plan_path:
+    description: 'The (optional) tfplan file'
+    required: false
   commenter_exitcode:
     description: 'The exit code from a previous step output'
     required: true
@@ -28,9 +31,11 @@ runs:
     - name: Run commenter image (plan)
       env:
         COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        COMMENTER_PLAN_FILE: ${{ inputs.commenter_plan_path }}
         GITHUB_EVENT: ${{ toJSON(github.event) }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_KEY }}
       run: |
+        COMMENTER_INPUT=${COMMENTER_INPUT::65000}
         docker run \
         -e GITHUB_TOKEN \
         -e TF_WORKSPACE \
@@ -44,8 +49,10 @@ runs:
         -e AWS_REGION \
         -e COMMENTER_DEBUG \
         -e COMMENTER_ECHO \
+        -e COMMENTER_PLAN_FILE \
+        -e COMMENTER_POST_PLAN_OUTPUTS \
         -v "$(pwd)"/:/workspace \
-        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
+        commenter ${{ inputs.commenter_type }} ${{ inputs.commenter_exitcode }}
       shell: bash
       if: ${{ inputs.commenter_type == 'plan' }}
     - name: Run commenter image (non-plan)
@@ -62,7 +69,7 @@ runs:
         -e COMMENTER_INPUT \
         -e COMMENTER_DEBUG \
         -e COMMENTER_ECHO \
-        commenter ${{ inputs.commenter_type }} nop ${{ inputs.commenter_exitcode }}
+        commenter ${{ inputs.commenter_type }} ${{ inputs.commenter_exitcode }}
       shell: bash
       if: ${{ inputs.commenter_type != 'plan' }}
 
