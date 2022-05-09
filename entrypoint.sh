@@ -182,7 +182,7 @@ delete_existing_comments () {
   fi
 }
 
-post_comments () {
+post_diff_comments () {
   local type=$1
   local comment_prefix=$2
   local comment_string=$3
@@ -202,7 +202,7 @@ post_comments () {
       comment_count_text=" ($((i+1))/$comment_count)"
     fi
 
-    local comment=$(make_details_with_header "$comment_prefix$comment_count_text" "$colorized_comment")
+    local comment=$(make_details_with_header "$comment_prefix$comment_count_text" "$colorized_comment" "diff")
     make_and_post_payload "$type" "$comment"
   done
 }
@@ -210,17 +210,19 @@ post_comments () {
 make_details_with_header() {
   local header="### $1"
   local body=$2
+  local format=$3
   local pr_comment="$header
-$(make_details "Show Output" "$body")"
+$(make_details "Show Output" "$body" "$format")"
   echo "$pr_comment"
 }
 
 make_details() {
   local summary="$1"
   local body=$2
+  local format=$3
   local details="<details$DETAILS_STATE><summary>$summary</summary>
 
-\`\`\`
+\`\`\`$format
 $body
 \`\`\`
 </details>"
@@ -267,14 +269,14 @@ post_plan_comments () {
   local clean_plan=$(echo "$INPUT" | perl -pe'$_="" unless /(An execution plan has been generated and is shown below.|Terraform used the selected providers to generate the following execution|No changes. Infrastructure is up-to-date.|No changes. Your infrastructure matches the configuration.)/ .. 1') # Strip refresh section
   clean_plan=$(echo "$clean_plan" | sed -r '/Plan: /q') # Ignore everything after plan summary
 
-  post_comments "plan" "Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`" "$clean_plan"
+  post_diff_comments "plan" "Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`" "$clean_plan"
 }
 
 post_outputs_comments() {
   local clean_plan=$(echo "$INPUT" | perl -pe'$_="" unless /Changes to Outputs:/ .. 1') # Skip to end of plan summary
   clean_plan=$(echo "$clean_plan" | sed -r '/------------------------------------------------------------------------/q') # Ignore everything after plan summary
 
-  post_comments "outputs" "Changes to outputs for Workspace: \`$WORKSPACE\`" "$clean_plan"
+  post_diff_comments "outputs" "Changes to outputs for Workspace: \`$WORKSPACE\`" "$clean_plan"
 }
 
 ##############
@@ -320,7 +322,7 @@ fmt_fail () {
     for file in $INPUT; do
       local this_file_diff=$(terraform fmt -no-color -write=false -diff "$file")
       all_files_diff="$all_files_diff
-$(make_details "<code>$file</code>" "$this_file_diff")"
+$(make_details "<code>$file</code>" "$this_file_diff" "diff")"
     done
 
     pr_comment="### Terraform \`fmt\` Failed
