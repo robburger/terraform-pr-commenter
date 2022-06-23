@@ -31,6 +31,7 @@ This action can only be run after a Terraform `fmt`, `init`, `plan` or `validate
 | `commenter_type`     | _required_  | The type of comment. Options: [`fmt`, `init`, `plan`, `validate`] |
 | `commenter_input`    | _required_  | The comment to post from a previous step output.                  |
 | `commenter_exitcode` | _required_  | The exit code from a previous step output.                        |
+| `commenter_comment`  | _optional_  | An optional comment to add to the end of the headline.          |
 
 ### Environment Variables
 

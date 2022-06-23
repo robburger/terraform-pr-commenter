@@ -24,6 +24,8 @@ if [[ ! "$1" =~ ^(fmt|init|plan|validate)$ ]]; then
   exit 1
 fi
 
+comment="$4"
+
 ##################
 # Shared Variables
 ##################
@@ -82,7 +84,7 @@ if [[ $COMMAND == 'fmt' ]]; then
   # Meaning: 1 = Malformed Terraform CLI command. 2 = Terraform parse error.
   # Actions: Build PR comment.
   if [[ $EXIT_CODE -eq 1 || $EXIT_CODE -eq 2 ]]; then
-    PR_COMMENT="### Terraform \`fmt\` Failed
+    PR_COMMENT="### Terraform \`fmt\` Failed $comment
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`
@@ -107,7 +109,7 @@ $THIS_FILE_DIFF
 </details>"
     done
 
-    PR_COMMENT="### Terraform \`fmt\` Failed
+    PR_COMMENT="### Terraform \`fmt\` Failed $comment
 $ALL_FILES_DIFF"
   fi
 
@@ -147,7 +149,7 @@ if [[ $COMMAND == 'init' ]]; then
   # Meaning: Terraform initialize failed or malformed Terraform CLI command.
   # Actions: Build PR comment.
   if [[ $EXIT_CODE -eq 1 ]]; then
-    PR_COMMENT="### Terraform \`init\` Failed
+    PR_COMMENT="### Terraform \`init\` Failed $comment
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`
@@ -190,7 +192,7 @@ if [[ $COMMAND == 'plan' ]]; then
     if [[ $COLOURISE == 'true' ]]; then
       CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
     fi
-    PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
+    PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\` $comment
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`diff
@@ -203,7 +205,7 @@ $CLEAN_PLAN
   # Meaning: Terraform plan failed.
   # Actions: Build PR comment.
   if [[ $EXIT_CODE -eq 1 ]]; then
-    PR_COMMENT="### Terraform \`plan\` Failed for Workspace: \`$WORKSPACE\`
+    PR_COMMENT="### Terraform \`plan\` Failed for Workspace: \`$WORKSPACE\` $comment
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`
@@ -248,7 +250,7 @@ if [[ $COMMAND == 'validate' ]]; then
   # Meaning: Terraform validate failed or malformed Terraform CLI command.
   # Actions: Build PR comment.
   if [[ $EXIT_CODE -eq 1 ]]; then
-    PR_COMMENT="### Terraform \`validate\` Failed
+    PR_COMMENT="### Terraform \`validate\` Failed $comment
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`
