@@ -159,24 +159,64 @@ substitute_and_colorize () {
   echo "$current_plan"
 }
 
+get_page_count () {
+  info "Checking comment page count."
+
+  local link_header
+  local last_page=1
+
+  link_header=$(curl -sSI -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL" | grep -i ^link)
+
+  # if I find a matching link header...
+  if echo "$link_header" | grep -Fi 'rel="next"'; then
+    # we found a next page -> find the last page
+    IFS=',' read -ra links <<< "$link_header"
+    for link in "${links[@]}"; do
+      # process "$i"
+      local regex
+      page_regex='^.*page=([0-9]+).*$'
+
+      # if this is the 'last' ref...
+      if echo "$link" | grep -Fi 'rel="last"'; then
+        if [[ $link =~ $page_regex ]]; then
+          last_page="${BASH_REMATCH[1]}"
+          debug "Last page = $last_page"
+          break
+        fi
+      fi
+    done
+  fi
+
+  echo "$last_page"
+}
+
 delete_existing_comments () {
   # Look for an existing PR comment and delete
   # debug "Existing comments:  $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L $PR_COMMENTS_URL)"
 
   local type=$1
   local regex=$2
+  local last_page
 
   local jq='.[] | select(.body|test ("'
   jq+=$regex
   jq+='")) | .id'
+
+  last_page=$(get_page_count)
+  info "Found $last_page page(s) of comments."
+
   info "Looking for an existing $type PR comment."
-  for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L $PR_COMMENTS_URL | jq "$jq")
+  for page in 1 .. $last_page
   do
-    FOUND=true
-    info "Found existing $type PR comment: $PR_COMMENT_ID. Deleting."
-    PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
-    curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
+    for PR_COMMENT_ID in $(curl -sS -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENTS_URL&page=$page" | jq "$jq")
+    do
+      FOUND=true
+      info "Found existing $type PR comment: $PR_COMMENT_ID. Deleting."
+      PR_COMMENT_URL="$PR_COMMENT_URI/$PR_COMMENT_ID"
+      curl -sS -X DELETE -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L "$PR_COMMENT_URL" > /dev/null
+    done
   done
+
   if [ -z $FOUND ]; then
     info "No existing $type PR comment found."
   fi
