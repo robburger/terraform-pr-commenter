@@ -2403,8 +2403,9 @@ ACCEPT_HEADER="Accept: application/vnd.github.v3+json"
 AUTH_HEADER="Authorization: token $GH_TOKEN"
 CONTENT_HEADER="Content-Type: application/json"
 
-PR_COMMENTS_URL="https://api.github.com/repos/GetTerminus/web-event-capture-infra/issues/122/comments"
-PR_COMMENT_URI="https://api.github.com/repos/GetTerminus/web-event-capture-infra/issues/comments/122"
+PR_COMMENTS_URL="https://api.github.com/repos/GetTerminus/eks-observability-infra/issues/4/comments"
+PR_COMMENT_URI="https://api.github.com/repos/GetTerminus/eks-observability-infra/issues/comments/4"
+# curl -sSi -H "$AUTH_HEADER" -H "$ACCEPT_HEADER" -L $PR_COMMENTS_URL
 
 WORKSPACE=ninja
 POST_PLAN_OUTPUTS=true
