@@ -217,10 +217,12 @@ ${INPUT}
   echo -e "\033[34;1mINFO:\033[0m Adding plan comment to PR."
   curl -sS -X POST -H "${AUTH_HEADER}" -H "${ACCEPT_HEADER}" -H "${CONTENT_HEADER}" -d "${PR_PAYLOAD}" -L "${PR_COMMENTS_URL}" > /dev/null
 
-  if [[ ${EXIT_CODE} -eq 1 || ${EXIT_CODE} -eq 2 ]]; then
-    # Plan Succeeds on 0 or 2
+  # 'terraform plan'  will exit 0, 1 or 2 depending on status.
+  if [[ ${EXIT_CODE} -eq 0 || ${EXIT_CODE} -eq 2 ]]; then
+    # Plan succeeds with 0 or 2
     exit 0
   else
+    # Plan errors with 1
     exit 1
   fi
 fi
