@@ -33,6 +33,8 @@ COMMAND=${1}
 INPUT=$(echo "${2}" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
 EXIT_CODE=${3}
+echo -e "\033[34;1mINFO:\033[0m Enumerated exit code ${EXIT_CODE} from prior Terraform step."
+
 
 # Read TF_WORKSPACE environment variable or use "default"
 WORKSPACE=${TF_WORKSPACE:-default}
@@ -220,9 +222,11 @@ ${INPUT}
   # 'terraform plan'  will exit 0, 1 or 2 depending on status.
   if [[ ${EXIT_CODE} -eq 0 || ${EXIT_CODE} -eq 2 ]]; then
     # Plan succeeds with 0 or 2
+    echo -e "\033[34;1mINFO:\033[0m Exiting normally."
     exit 0
   else
     # Plan errors with 1
+    echo -e "\033[34;1mINFO:\033[0m Exiting with error."
     exit 1
   fi
 fi
