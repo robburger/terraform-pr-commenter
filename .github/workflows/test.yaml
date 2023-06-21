@@ -1,20 +1,10 @@
 name: Test
 
 on:
-  workflow_dispatch:
-    inputs:
-      test_input_type:
-        type: choice
-        description: Test input type
-        options:
-          - file
-          - output
-        default: file
-      clear_comments:
-        description: 'Whether or not to clear comments from the pull request when finished.'
-        required: true
-        default: false
-        type: boolean
+  workflow_run:
+    workflows: [Release Beta]
+    types:
+      - completed
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -30,6 +20,7 @@ env:
 jobs:
   set-outputs:
     name: Set Outputs
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       tf_fmt_fail: ${{ steps.file_outputs.outputs.tf_fmt_fail }}
@@ -69,45 +60,20 @@ jobs:
           echo "$EOF" >> $GITHUB_OUTPUT
 
   # To test other scenarios please change the below variables as necessary.
-  commenter-file-test:
-    name: Plan File Tests
+  commenter-test:
+    name: Test Commenter
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: TF Plan File - tf_plan_fail
-        uses: GetTerminus/terraform-pr-commenter@v3-beta
-        with:
-          commenter_type: plan
-          commenter_plan_path: ./testing/text-files/tf_plan_fail.txt
-          commenter_exitcode: 1
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          use_beta_version: ${{ env.USE_BETA_VERSION }}
-      - uses: izhangzhihao/delete-comment@master
-        if: ${{ inputs.clear_comments == 'true' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_user_name: github-actions[bot]
-          issue_number: ${{ github.event.number }}
-
-  # To test other scenarios please change the below variables as necessary.
-  commenter-output-test:
-    name: Plan Output Tests
-    if: ${{ inputs.
     needs: set-outputs
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: TF Plan File - tf_plan_fail
+      - name: Test
         uses: GetTerminus/terraform-pr-commenter@v3-beta
         with:
           commenter_type: plan
-          commenter_input: ${{ needs.set-outputs.outputs.tf_plan_fail }}
+          # Should only be setting commenter_input or commenter_plan_path (commenter_plan_path only for plan commenter type)
+          #commenter_input: ${{ needs.set-outputs.outputs.tf_plan_fail }}
+          commenter_plan_path: ./testing/text-files/tf_plan_success_with_changes.txt
           commenter_exitcode: 1
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           use_beta_version: ${{ env.USE_BETA_VERSION }}
-      - uses: izhangzhihao/delete-comment@master
-        if: ${{ inputs.clear_comments == 'true' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_user_name: github-actions[bot]
-          issue_number: ${{ github.event.number }}
