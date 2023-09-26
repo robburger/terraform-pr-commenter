@@ -9,15 +9,76 @@ inputs:
     description: 'The type of comment. Options: [fmt, init, plan]'
     required: true
   commenter_input:
-    description: 'The comment to post from a previous step output'
+    description: 'The comment to post from a previous step output.  Will be trimmed to 64k length.'
     required: true
+  commenter_plan_path:
+    description: 'The (optional) tfplan file'
+    required: false
   commenter_exitcode:
     description: 'The exit code from a previous step output'
     required: true
+  terraform_version:
+    description: 'The version of terraform with which a plan was generated'
+    required: false
+    default: "1.0.6"
+  use_beta_version:
+    description: 'Whether to use the beta version of the commenter'
+    required: false
+    default: 'false'
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.commenter_type }}
-    - ${{ inputs.commenter_input }}
-    - ${{ inputs.commenter_exitcode }}
+  using: "composite"
+  steps:
+    - name: Build commenter docker image (master)
+      if: inputs.use_beta_version != 'true'
+      run: docker build --build-arg TERRAFORM_VERSION=${{ inputs.terraform_version }} -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#master
+      shell: bash
+    - name: Build commenter docker image (beta)
+      if: inputs.use_beta_version == 'true'
+      # append branch with a pound (#) if developing.  e.g., `commenter.git#my-branch`
+      run: docker build --build-arg TERRAFORM_VERSION=${{ inputs.terraform_version }} -t commenter https://github.com/GetTerminus/terraform-pr-commenter.git#v2-beta
+      shell: bash
+    - name: Run commenter image (plan)
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        COMMENTER_PLAN_FILE: ${{ inputs.commenter_plan_path }}
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_KEY }}
+      run: |
+        COMMENTER_INPUT=${COMMENTER_INPUT::65000}
+        docker run \
+        -e GITHUB_TOKEN \
+        -e TF_WORKSPACE \
+        -e EXPAND_SUMMARY_DETAILS \
+        -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT \
+        -e COMMENTER_INPUT \
+        -e AWS_ACCESS_KEY_ID \
+        -e AWS_SECRET_KEY \
+        -e AWS_SECRET_ACCESS_KEY \
+        -e AWS_REGION \
+        -e COMMENTER_DEBUG \
+        -e COMMENTER_ECHO \
+        -e COMMENTER_PLAN_FILE \
+        -e COMMENTER_POST_PLAN_OUTPUTS \
+        -v "$(pwd)"/:/workspace \
+        commenter ${{ inputs.commenter_type }} ${{ inputs.commenter_exitcode }}
+      shell: bash
+      if: ${{ inputs.commenter_type == 'plan' }}
+    - name: Run commenter image (non-plan)
+      env:
+        COMMENTER_INPUT: ${{ inputs.commenter_input }}
+        GITHUB_EVENT: ${{ toJSON(github.event) }}
+      run: |
+        docker run \
+        -e GITHUB_TOKEN \
+        -e TF_WORKSPACE \
+        -e EXPAND_SUMMARY_DETAILS \
+        -e HIGHLIGHT_CHANGES \
+        -e GITHUB_EVENT \
+        -e COMMENTER_INPUT \
+        -e COMMENTER_DEBUG \
+        -e COMMENTER_ECHO \
+        commenter ${{ inputs.commenter_type }} ${{ inputs.commenter_exitcode }}
+      shell: bash
+      if: ${{ inputs.commenter_type != 'plan' }}
+

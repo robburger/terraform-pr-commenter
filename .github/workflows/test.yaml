@@ -1,0 +1,79 @@
+name: Test
+
+on:
+  workflow_run:
+    workflows: [Release Beta]
+    types:
+      - completed
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TERRAFORM_VERSION: "1.4.6"
+  TF_WORKSPACE: "testing"
+  USE_BETA_VERSION: "true"
+  COMMENTER_DEBUG: "true"
+  GH_ACCEPT_HEADER: "Accept: application/vnd.github+json"
+  GH_AUTH_HEADER: "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"
+  GH_API_VERSION: "X-GitHub-Api-Version: 2022-11-28"
+  GH_COMMENT_URL: https://api.github.com/repos/GetTerminus/terraform-pr-commenter/issues/${{ github.event.number }}/comments
+
+jobs:
+  set-outputs:
+    name: Set Outputs
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      tf_fmt_fail: ${{ steps.file_outputs.outputs.tf_fmt_fail }}
+      tf_init_fail: ${{ steps.file_outputs.outputs.tf_init_fail }}
+      tf_plan_fail: ${{ steps.file_outputs.outputs.tf_plan_fail }}
+      tf_plan_fail_partial: ${{ steps.file_outputs.outputs.tf_plan_fail_partial }}
+      tf_plan_success_no_changes: ${{ steps.file_outputs.outputs.tf_plan_success_no_changes }}
+      tf_plan_success_with_changes: ${{ steps.file_outputs.outputs.tf_plan_success_with_changes }}
+      tf_plan_success_long: ${{ steps.file_outputs.outputs.tf_plan_success_long }}
+      tf_validate_fail: ${{ steps.file_outputs.outputs.tf_validate_fail }}
+    strategy:
+      matrix:
+        filenames:
+          - "tf_fmt_fail"
+          - "tf_init_fail"
+          - "tf_plan_fail"
+          - "tf_plan_fail_partial"
+          - "tf_plan_success_no_changes"
+          - "tf_plan_success_with_changes"
+          - "tf_plan_success_long"
+          - "tf_validate_fail"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set Test Outputs
+        id: file_outputs
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          
+          #have to truncate so we don't get an "argument list too long" error
+          if [[ "${{ matrix.filenames }}" == "tf_plan_success_long" ]]; then
+            OUTPUT=$(cat ./testing/text-files/${{ matrix.filenames }}.txt)
+            echo "${OUTPUT::130000}" > ./testing/text-files/${{ matrix.filenames }}.txt
+          fi
+
+          echo "${{ matrix.filenames }}<<$EOF" >> $GITHUB_OUTPUT
+          echo "$(cat ./testing/text-files/${{ matrix.filenames }}.txt)" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+  # To test other scenarios please change the below variables as necessary.
+  commenter-test:
+    name: Test Commenter
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    needs: set-outputs
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test
+        uses: GetTerminus/terraform-pr-commenter@v3-beta
+        with:
+          commenter_type: plan
+          # Should only be setting commenter_input or commenter_plan_path (commenter_plan_path only for plan commenter type)
+          #commenter_input: ${{ needs.set-outputs.outputs.tf_plan_fail }}
+          commenter_plan_path: ./testing/text-files/tf_plan_success_with_changes.txt
+          commenter_exitcode: 1
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          use_beta_version: ${{ env.USE_BETA_VERSION }}

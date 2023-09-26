@@ -1,4 +1,5 @@
-FROM hashicorp/terraform:1.0.6
+ARG TERRAFORM_VERSION=1.0.6
+FROM hashicorp/terraform:${TERRAFORM_VERSION}
 
 LABEL repository="https://github.com/robburger/terraform-pr-commenter" \
       homepage="https://github.com/robburger/terraform-pr-commenter" \
@@ -11,6 +12,7 @@ LABEL repository="https://github.com/robburger/terraform-pr-commenter" \
 RUN apk add --no-cache -q \
     bash \
     curl \
+    perl \
     jq
 
 ADD entrypoint.sh /entrypoint.sh
