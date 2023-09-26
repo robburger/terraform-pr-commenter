@@ -4,6 +4,9 @@ Adds opinionated comments to PR's based on Terraform `fmt`, `init`, `plan` and `
 
 Fork of unmaintained [robburger/terraform-pr-commenter](https://github.com/robburger/terraform-pr-commenter).
 
+Please also take a look at other forks that might suit your use-case more:
+- [GetTerminus/terraform-pr-commenter](https://github.com/GetTerminus/terraform-pr-commenter)
+
 ## Summary
 
 This Docker-based GitHub Action is designed to work in tandem with [hashicorp/setup-terraform](https://github.com/hashicorp/setup-terraform) with the **wrapper enabled**, taking the output from a `fmt`, `init`, `plan` or `validate`, formatting it and adding it to a pull request. Any previous comments from this Action are removed to keep the PR timeline clean.
