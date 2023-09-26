@@ -17,13 +17,16 @@ Support (for now) is [limited to Linux](https://help.github.com/en/actions/creat
 This action can only be run after a Terraform `fmt`, `init`, `plan` or `validate` has completed, and the output has been captured. Terraform rarely writes to `stdout` and `stderr` in the same action, so we concatenate the `commenter_input`:
 
 ```yaml
-- uses: robburger/terraform-pr-commenter@v1
+- name: Comment PR with Terraform Plan
+  uses: Jimdo/terraform-pr-commenter@main
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    TF_WORKSPACE: stage
   with:
     commenter_type: fmt/init/plan/validate # Choose one
     commenter_input: ${{ format('{0}{1}', steps.step_id.outputs.stdout, steps.step_id.outputs.stderr) }}
     commenter_exitcode: ${{ steps.step_id.outputs.exitcode }}
+    commenter_comment: "Cluster" # optional, e.g. to differentiate "Cluster" vs. "Kubernetes"
 ```
 
 ### Inputs
@@ -33,7 +36,7 @@ This action can only be run after a Terraform `fmt`, `init`, `plan` or `validate
 | `commenter_type`     | _required_  | The type of comment. Options: [`fmt`, `init`, `plan`, `validate`] |
 | `commenter_input`    | _required_  | The comment to post from a previous step output.                  |
 | `commenter_exitcode` | _required_  | The exit code from a previous step output.                        |
-| `commenter_comment`  | _optional_  | An optional comment to add to the end of the headline.          |
+| `commenter_comment`  | _optional_  | An optional comment to add to the end of the headline.            |
 
 ### Environment Variables
 
@@ -58,7 +61,7 @@ jobs:
         uses: actions/checkout@v2
 ...
       - name: Post Plan
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EXPAND_SUMMARY_DETAILS: 'true' # Override global environment variable; expand details just for this step
@@ -66,6 +69,7 @@ jobs:
           commenter_type: plan
           commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
           commenter_exitcode: ${{ steps.plan.outputs.exitcode }}
+          commenter_comment: "Cluster" # optional, e.g. to differentiate "Cluster" vs. "Kubernetes"
 ...
 ```
 
@@ -106,7 +110,7 @@ jobs:
 
       - name: Post Format
         if: always() && github.ref != 'refs/heads/master' && (steps.fmt.outcome == 'success' || steps.fmt.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         with:
           commenter_type: fmt
           commenter_input: ${{ format('{0}{1}', steps.fmt.outputs.stdout, steps.fmt.outputs.stderr) }}
@@ -118,7 +122,7 @@ jobs:
 
       - name: Post Init
         if: always() && github.ref != 'refs/heads/master' && (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         with:
           commenter_type: init
           commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
@@ -130,7 +134,7 @@ jobs:
 
       - name: Post Validate
         if: always() && github.ref != 'refs/heads/master' && (steps.validate.outcome == 'success' || steps.validate.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         with:
           commenter_type: validate
           commenter_input: ${{ format('{0}{1}', steps.validate.outputs.stdout, steps.validate.outputs.stderr) }}
@@ -142,7 +146,7 @@ jobs:
 
       - name: Post Plan
         if: always() && github.ref != 'refs/heads/master' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         with:
           commenter_type: plan
           commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
@@ -185,7 +189,7 @@ jobs:
 
       - name: Post Init - ${{ matrix['workspace'] }}
         if: always() && github.ref != 'refs/heads/master' && (steps.init.outcome == 'success' || steps.init.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
           with:
             commenter_type: init
             commenter_input: ${{ format('{0}{1}', steps.init.outputs.stdout, steps.init.outputs.stderr) }}
@@ -197,7 +201,7 @@ jobs:
 
       - name: Post Plan - ${{ matrix['workspace'] }}
         if: always() && github.ref != 'refs/heads/master' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: robburger/terraform-pr-commenter@v1
+        uses: Jimdo/terraform-pr-commenter@main
         with:
           commenter_type: plan
           commenter_input: ${{ format('{0}{1}', steps.plan.outputs.stdout, steps.plan.outputs.stderr) }}
