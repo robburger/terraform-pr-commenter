@@ -1,4 +1,4 @@
-name: 'Terraform PR Commenter'
+name: 'Terraform PR Commenter (Jimdo)'
 description: 'Adds opinionated comments to a PR from Terraform fmt/init/plan output'
 author: 'Jimdo'
 branding:
