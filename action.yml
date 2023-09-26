@@ -1,6 +1,6 @@
 name: 'Terraform PR Commenter'
 description: 'Adds opinionated comments to a PR from Terraform fmt/init/plan output'
-author: 'Rob Burger'
+author: 'Jimdo'
 branding:
   icon: 'git-pull-request'
   color: 'purple'
