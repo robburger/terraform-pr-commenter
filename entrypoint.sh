@@ -33,6 +33,8 @@ COMMAND=$1
 INPUT=$(echo "$2" | sed 's/\x1b\[[0-9;]*m//g')
 # Arg 3 is the Terraform CLI exit code
 EXIT_CODE=$3
+# Arg 4 is extra arguments for the command
+EXTRA_ARGS=$4
 
 # Read TF_WORKSPACE environment variable or use "default"
 WORKSPACE=${TF_WORKSPACE:-default}
@@ -190,7 +192,7 @@ if [[ $COMMAND == 'plan' ]]; then
     if [[ $COLOURISE == 'true' ]]; then
       CLEAN_PLAN=$(echo "$CLEAN_PLAN" | sed -r 's/^~/!/g') # Replace ~ with ! to colourise the diff in GitHub comments
     fi
-    PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\`
+    PR_COMMENT="### Terraform \`plan\` Succeeded for Workspace: \`$WORKSPACE\` - \`$EXTRA_ARGS\`
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`diff
@@ -203,7 +205,7 @@ $CLEAN_PLAN
   # Meaning: Terraform plan failed.
   # Actions: Build PR comment.
   if [[ $EXIT_CODE -eq 1 ]]; then
-    PR_COMMENT="### Terraform \`plan\` Failed for Workspace: \`$WORKSPACE\`
+    PR_COMMENT="### Terraform \`plan\` Failed for Workspace: \`$WORKSPACE\` - \`$EXTRA_ARGS\`
 <details$DETAILS_STATE><summary>Show Output</summary>
 
 \`\`\`
